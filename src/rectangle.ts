@@ -1,4 +1,4 @@
-import type { Point } from "./point"
+import type { Point } from "./point";
 
 export class Rectangle {
   constructor(
@@ -31,5 +31,9 @@ export class Rectangle {
       rect.y - (rect.height / 2) > this.y + (this.height / 2) ||
       rect.y + (rect.height / 2) < this.y - (this.height / 2)
     )
+  }
+
+  public static from(rect: Rectangle): Rectangle {
+    return new Rectangle(rect.x, rect.y, rect.width, rect.height);
   }
 }
