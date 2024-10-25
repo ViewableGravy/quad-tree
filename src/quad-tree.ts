@@ -27,7 +27,7 @@ export class QuadTree<T extends Rectangle> {
   constructor(
     public rect: Rectangle,
     private capacity: number = 4,
-    private isRoot: boolean = false
+    private isRoot: boolean = true
   ) {}
 
   public insert(node: T | Array<T>, force?: boolean) {
@@ -248,7 +248,8 @@ export class QuadTree<T extends Rectangle> {
           width / 2,
           height / 2
         ),
-        this.capacity
+        this.capacity,
+        false
       );
     }
   }
@@ -264,7 +265,8 @@ export class QuadTree<T extends Rectangle> {
           width / 2,
           height / 2
         ),
-        this.capacity
+        this.capacity,
+        false
       );
     }
   }
@@ -280,7 +282,8 @@ export class QuadTree<T extends Rectangle> {
           width / 2,
           height / 2
         ),
-        this.capacity
+        this.capacity,
+        false
       );
     }
   }
@@ -296,7 +299,8 @@ export class QuadTree<T extends Rectangle> {
           width / 2,
           height / 2
         ),
-        this.capacity
+        this.capacity,
+        false
       );
     }
   }
