@@ -1,14 +1,25 @@
 import { Point } from "./point";
 import { Rectangle } from "./rectangle";
 
-type QuadTreeOptions = {
-  capacity: number;
-}
+type childQuadDirection = "topLeft" | "topRight" | "bottomLeft" | "bottomRight";
 
 const QUAD_CODES = {
   NODE_NOT_WITHIN_BOUNDS: "NODE_NOT_WITHIN_BOUNDS",
   SUCCESS: "SUCCESS"
 } as const;
+
+function copyInstance<T>(original: T | null) {
+  if (!original)
+    return null;
+
+  var copied = Object.assign(
+    Object.create(
+      Object.getPrototypeOf(original)
+    ),
+    original
+  );
+  return copied;
+}
 
 export class QuadTree<T extends Rectangle> {
   public topRight: QuadTree<T> | null = null
@@ -30,7 +41,7 @@ export class QuadTree<T extends Rectangle> {
     private isRoot: boolean = true
   ) {}
 
-  public insert(node: T | Array<T>, force?: boolean) {
+  public insert(node: T | Array<T>) {
     if (Array.isArray(node)) {
       for (const n of node) {
         this.insert(n);
@@ -39,31 +50,24 @@ export class QuadTree<T extends Rectangle> {
     }
 
     if (!this.rect.intersects(node)) {
-      if (this.isRoot) {
-        this.expand(node);
-        this.insert(node);
-        return
-      }
-
-      return QUAD_CODES.NODE_NOT_WITHIN_BOUNDS;
+      if (!this.isRoot)
+        return QUAD_CODES.NODE_NOT_WITHIN_BOUNDS;
+      
+      this.expand(node);
+      return void this.insert(node);
     }
 
     const hasFreeCapacity = this.nodes.length < this.capacity;
-    if (force || (hasFreeCapacity && !this.hasSubdivided())) {
-      return this.nodes.push(node)
-    }
+    if (hasFreeCapacity && !this.hasSubdivided())
+      return void this.nodes.push(node);
 
     this.subdivide();
 
     // Push node to this tree if it intersects more than 1 child
-    if (this.childIntersections(node) > 1) {
-      return this.nodes.push(node);
-    }
+    if (this.childIntersections(node) > 1)
+      return void this.nodes.push(node);
 
-    this.topRight!.insert(node)
-    this.topLeft!.insert(node)
-    this.bottomRight!.insert(node)
-    this.bottomLeft!.insert(node)
+    this.insertChildren(node);
   }
 
   public retrieve(from: Rectangle | Point, logging: boolean = false): Array<T> {
@@ -107,10 +111,19 @@ export class QuadTree<T extends Rectangle> {
     ]
   }
 
-  private subdivide() {
-    if (!this.isLeaf) {
+  public retrieveAll(): Array<T> {
+    return [
+      ...this.nodes,
+      ...this.topRight?.retrieveAll() || [],
+      ...this.topLeft?.retrieveAll() || [],
+      ...this.bottomRight?.retrieveAll() || [],
+      ...this.bottomLeft?.retrieveAll() || []
+    ]
+  }
+
+  private subdivide(): void {
+    if (this.hasSubdivided())
       return;
-    }
 
     this.instantiateBottomLeft(false);
     this.instantiateBottomRight(false);
@@ -131,10 +144,7 @@ export class QuadTree<T extends Rectangle> {
       }
 
       // If we aren't storing in this node then insert into relevant child node
-      this.topRight!.insert(node, true)
-      this.topLeft!.insert(node, true)
-      this.bottomRight!.insert(node, true)
-      this.bottomLeft!.insert(node, true)
+      this.insertChildren(node);
     }
 
     this.nodes = newNodes;
@@ -147,81 +157,45 @@ export class QuadTree<T extends Rectangle> {
    * Note: only root quad trees can be expanded.
    */
   private expand(towards: Rectangle) {
-    if (!this.isRoot) {
-      return;
-    }
-    
     const { bottomLeft, bottomRight, capacity, isLeaf, nodes, rect, topLeft, topRight } = this;
 
-    type childQuadDirection = "topLeft" | "topRight" | "bottomLeft" | "bottomRight";
-    // we need to work out whether we should expand top-left or bottom-right.
-    const getNewRect = (): [childQuadDirection: childQuadDirection, Rectangle] => {      
-      // bottom right
-      if (towards.x > rect.x && towards.y > rect.y) {
-        return ["topLeft", new Rectangle(
-          rect.x + rect.width / 2, 
-          rect.y + rect.width / 2, 
-          rect.width * 2,
-          rect.height * 2
-        )];
-      }
-
-      // bottom left
-      if (towards.x < rect.x && towards.y > rect.y) {
-        return ["topRight", new Rectangle(
-          rect.x - rect.width / 2, 
-          rect.y + rect.width / 2, 
-          rect.width * 2,
-          rect.height * 2
-        )];
-      }
-
-      // top right
-      if (towards.x > rect.x && towards.y < rect.y) {
-        return ["bottomLeft", new Rectangle(
-          rect.x + rect.width / 2, 
-          rect.y - rect.width / 2, 
-          rect.width * 2,
-          rect.height * 2
-        )];
-      }
-
-      return ["bottomRight", new Rectangle(
-        rect.x - rect.width / 2, 
-        rect.y - rect.width / 2, 
-        rect.width * 2,
-        rect.height * 2
-      )];
-    }
+    if (!this.isRoot)
+      return;
 
     // create new quad tree and set all fields to match this objects fields;
-    const newQuad = new QuadTree<T>(
+    const childQuad = new QuadTree<T>(
       Rectangle.from(rect),
-      capacity,
+      structuredClone(capacity),
       false
     );
 
-    newQuad.isLeaf = isLeaf;
-    newQuad.bottomLeft = bottomLeft;
-    newQuad.bottomRight = bottomRight;
-    newQuad.topLeft = topLeft;
-    newQuad.topRight = topRight;
-    newQuad.nodes = nodes;
+    childQuad.isLeaf = structuredClone(isLeaf);
+    childQuad.bottomLeft = copyInstance(bottomLeft);
+    childQuad.bottomRight = copyInstance(bottomRight);
+    childQuad.topLeft = copyInstance(topLeft);
+    childQuad.topRight = copyInstance(topRight);
+    childQuad.nodes = structuredClone(nodes);
     
-    const [direction, newRect] = getNewRect();
+    const [direction, newRect] = QuadTreeMethods.expansionDirection(rect, towards);
+
     // update the current quad tree to be a parent of this new quad.
     this.rect = newRect;
-    this.capacity = capacity;
+    this.capacity = structuredClone(capacity);
     this.isRoot = true;
     this.isLeaf = false;
+    this.nodes = [];
     
-    this[direction] = newQuad;
+    // Set the new quad tree to be a child of this quad tree.
+    this[direction] = childQuad;
     this.instantiateBottomRight(direction !== "bottomRight");
     this.instantiateBottomLeft(direction !== "bottomLeft");
     this.instantiateTopLeft(direction !== "topLeft");
     this.instantiateTopRight(direction !== "topRight");
   }
 
+  /**
+   * Returns the number of children that the current node intersects with. 
+   */
   private childIntersections(node: T) {
     const intersections = [
       this.topLeft!.rect.intersects(node),
@@ -233,10 +207,17 @@ export class QuadTree<T extends Rectangle> {
     return intersections.filter(Boolean).length;
   }
 
+  /**
+   * Returns whether the current quad tree has been subdivided or not. This is simply derived from "isLead" for readability.
+   */
   private hasSubdivided() {
     return !this.isLeaf
   }
 
+  /**
+   * Creates a new quad tree in the bottom left quadrant of the current quad tree. This will only create
+   * a new quad tree if one does not already exist unless force is true.
+   */
   private instantiateBottomLeft(force: boolean) {
     const { x, y, height, width } = this.rect;
 
@@ -254,6 +235,10 @@ export class QuadTree<T extends Rectangle> {
     }
   }
 
+  /**
+   * Creates a new quad tree in the bottom right quadrant of the current quad tree. This will only create
+   * a new quad tree if one does not already exist unless force is true.
+   */
   private instantiateBottomRight(force: boolean) {
     const { x, y, height, width } = this.rect;
 
@@ -271,6 +256,10 @@ export class QuadTree<T extends Rectangle> {
     }
   }
 
+  /**
+   * Creates a new quad tree in the top left quadrant of the current quad tree. This will only create
+   * a new quad tree if one does not already exist unless force is true.
+   */
   private instantiateTopLeft(force: boolean) {
     const { x, y, height, width } = this.rect;
 
@@ -288,6 +277,10 @@ export class QuadTree<T extends Rectangle> {
     }
   }
 
+  /**
+   * Creates a new quad tree in the top right quadrant of the current quad tree. This will only create
+   * a new quad tree if one does not already exist unless force is true.
+   */
   private instantiateTopRight(force: boolean) {
     const { x, y, height, width } = this.rect;
 
@@ -303,5 +296,70 @@ export class QuadTree<T extends Rectangle> {
         false
       );
     }
+  }
+
+  /**
+   * Inserts the node into the children of the current node. This should only ever be called if the node intersects exactly
+   * one child. This function will throw an error if that is not the case.
+   */
+  private insertChildren(node: T) {
+    const result = [
+      this.topRight!.insert(node),
+      this.topLeft!.insert(node),
+      this.bottomRight!.insert(node),
+      this.bottomLeft!.insert(node)
+    ];
+
+    if (result.filter((r) => r !== QUAD_CODES.NODE_NOT_WITHIN_BOUNDS).length > 1) {
+      throw new Error(
+        `Node was within bounds of more than one child ${result}`,
+      );
+    }
+  }
+}
+
+
+class QuadTreeMethods {
+  /**
+   * Accepts the current quad tree rectangle, and a rectangle that we need to expand towards, 
+   * and returns the direction and the new rectangle that the current quad tree should be expanded to.
+   */
+  public static expansionDirection = (rect: Rectangle, towards: Rectangle): [childQuadDirection: childQuadDirection, Rectangle] => {      
+    // bottom right
+    if (towards.x > rect.x && towards.y > rect.y) {
+      return ["topLeft", new Rectangle(
+        rect.x + rect.width / 2, 
+        rect.y + rect.width / 2, 
+        rect.width * 2,
+        rect.height * 2
+      )];
+    }
+
+    // bottom left
+    if (towards.x < rect.x && towards.y > rect.y) {
+      return ["topRight", new Rectangle(
+        rect.x - rect.width / 2, 
+        rect.y + rect.width / 2, 
+        rect.width * 2,
+        rect.height * 2
+      )];
+    }
+
+    // top right
+    if (towards.x > rect.x && towards.y < rect.y) {
+      return ["bottomLeft", new Rectangle(
+        rect.x + rect.width / 2, 
+        rect.y - rect.width / 2, 
+        rect.width * 2,
+        rect.height * 2
+      )];
+    }
+
+    return ["bottomRight", new Rectangle(
+      rect.x - rect.width / 2, 
+      rect.y - rect.width / 2, 
+      rect.width * 2,
+      rect.height * 2
+    )];
   }
 }
