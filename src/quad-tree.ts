@@ -1,5 +1,6 @@
 import { Point } from "./point";
 import { Rectangle } from "./rectangle";
+import { copyInstance } from "./utils";
 
 type childQuadDirection = "topLeft" | "topRight" | "bottomLeft" | "bottomRight";
 
@@ -7,19 +8,6 @@ const QUAD_CODES = {
   NODE_NOT_WITHIN_BOUNDS: "NODE_NOT_WITHIN_BOUNDS",
   SUCCESS: "SUCCESS"
 } as const;
-
-function copyInstance<T>(original: T | null) {
-  if (!original)
-    return null;
-
-  var copied = Object.assign(
-    Object.create(
-      Object.getPrototypeOf(original)
-    ),
-    original
-  );
-  return copied;
-}
 
 export class QuadTree<T extends Rectangle> {
   public topRight: QuadTree<T> | null = null
@@ -119,6 +107,37 @@ export class QuadTree<T extends Rectangle> {
       ...this.bottomRight?.retrieveAll() || [],
       ...this.bottomLeft?.retrieveAll() || []
     ]
+  }
+
+  public delete(at: Rectangle | Point): void {
+    if (at instanceof Point) {
+      if (!this.rect.contains(at)) {
+        return;
+      }
+    }
+
+    if (at instanceof Rectangle) {
+      if (!this.rect.intersects(at)) {
+        return;
+      }
+    }
+
+    this.nodes = this.nodes.filter((node) => {
+      if (at instanceof Point) {
+        return !node.contains(at);
+      }
+
+      if (at instanceof Rectangle) {
+        return !node.intersects(at);
+      }
+
+      return true;
+    });
+
+    this.topRight?.delete(at);
+    this.topLeft?.delete(at);
+    this.bottomRight?.delete(at);
+    this.bottomLeft?.delete(at);
   }
 
   private subdivide(): void {

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+import { Point } from "./point";
 import { QuadTree } from "./quad-tree";
 import { Rectangle } from "./rectangle";
 import { withQuadtree } from "./utils";
@@ -287,6 +288,121 @@ describe("QuadTree", () => {
 
   describe('retrieveAll()', () => {
     test("TODO", () => {})
+  })
+
+  describe('delete()', () => {
+    describe("GIVEN the tree is empty", () => {
+      describe('WHEN delete() is run', () => {
+        withQuadtree({ capacity: 1 }, (tree) => {
+          const result = tree.delete(new Point(0, 0));
+          
+          test("THEN it should return void", () => {
+            expect(result).toBe(void 0);
+          })
+          
+          test("AND the tree should still be empty", () => {
+            expect(tree.nodes.length).toBe(0);
+          })
+        })
+      })
+    });
+
+    describe("GIVEN the tree has a single node", () => {
+      describe('WHEN delete() is run with a point', () => {
+        describe('AND the point is NOT inside inside the inserted rectangle', () => { 
+          withQuadtree({ capacity: 2 }, (tree) => {
+            tree.insert(new Rectangle(0, 0, 5, 5));
+            
+            const result = tree.delete(new Point(5, 0));
+
+            test("THEN It should return void", () => {
+              expect(result).toBe(void 0);
+            });
+
+            test("AND the tree should still have 1 node", () => {
+              expect(tree.nodes.length).toBe(1);
+            });
+          })
+        })
+
+        describe('AND the point IS inside inside the inserted rectangle', () => { 
+          withQuadtree({ capacity: 2 }, (tree) => {
+            tree.insert(new Rectangle(0, 0, 5, 5));
+            
+            const result = tree.delete(new Point(0, 0));
+
+            test("THEN It should return void", () => {
+              expect(result).toBe(void 0);
+            });
+
+            test("AND the tree should have no nodes", () => {
+              expect(tree.nodes.length).toBe(0);
+            });
+          })
+        })
+
+      });
+
+      describe('WHEN delete() is run with a rectangle', () => {
+        describe('AND the Rectangle is NOT inside the inserted rectangle', () => { 
+          withQuadtree({ capacity: 2 }, (tree) => {
+            tree.insert(new Rectangle(0, 0, 5, 5));
+            
+            const result = tree.delete(new Rectangle(5, 5, 1, 1));
+
+            test("THEN It should return void", () => {
+              expect(result).toBe(void 0);
+            });
+
+            test("AND the tree should still have 1 node", () => {
+              expect(tree.nodes.length).toBe(1);
+            });
+          })
+        })
+
+        describe('AND the Rectangle IS inside the inserted rectangle', () => { 
+          withQuadtree({ capacity: 2 }, (tree) => {
+            tree.insert(new Rectangle(0, 0, 5, 5));
+            
+            const result = tree.delete(new Rectangle(1, 1, 1, 1));
+
+            test("THEN It should return void", () => {
+              expect(result).toBe(void 0);
+            });
+
+            test("AND the tree should still have 1 node", () => {
+              expect(tree.nodes.length).toBe(0);
+            });
+          })
+        })
+
+        describe('AND the Rectangle IS partially inside the inserted rectangle', () => { 
+          withQuadtree({ capacity: 2 }, (tree) => {
+            tree.insert(new Rectangle(0, 0, 5, 5));
+            
+            const result = tree.delete(new Rectangle(3, 3, 1, 1));
+
+            test("THEN It should return void", () => {
+              expect(result).toBe(void 0);
+            });
+
+            test("AND the tree should still have 1 node", () => {
+              expect(tree.nodes.length).toBe(0);
+            });
+          })
+        })
+      });
+    })
+
+    describe('GIVEN the tree has multiple nodes but has not subdivided', () => {
+      describe('WHEN delete() is run with a point', () => {
+        test("TODO", () => {})
+      })
+
+      describe('WHEN delete() is run with a rectangle', () => {
+        test("TODO", () => {})
+      })
+    })
   })
 })
 

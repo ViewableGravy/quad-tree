@@ -53,3 +53,16 @@ export const withQuadtree = (
     }
   });
 }
+
+export const copyInstance = <T>(original: T | null) => {
+  if (!original)
+    return null;
+
+  var copied = Object.assign(
+    Object.create(
+      Object.getPrototypeOf(original)
+    ),
+    original
+  );
+  return copied;
+}
