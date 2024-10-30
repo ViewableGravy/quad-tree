@@ -9,6 +9,9 @@ const QUAD_CODES = {
   SUCCESS: "SUCCESS"
 } as const;
 
+// For debugging purposes
+let treeID = 0
+
 export class QuadTree<T extends Rectangle> {
   public topRight: QuadTree<T> | null = null
   public topLeft: QuadTree<T> | null = null
@@ -22,6 +25,8 @@ export class QuadTree<T extends Rectangle> {
    * will be stored in this quads nodes rather than being passed down to the children.
    */
   public nodes: Array<T> = []
+  // For debugging purposes
+  public id = ++treeID
 
   constructor(
     public rect: Rectangle,
@@ -184,22 +189,22 @@ export class QuadTree<T extends Rectangle> {
     // create new quad tree and set all fields to match this objects fields;
     const childQuad = new QuadTree<T>(
       Rectangle.from(rect),
-      structuredClone(capacity),
+      capacity,
       false
     );
 
-    childQuad.isLeaf = structuredClone(isLeaf);
+    childQuad.isLeaf = isLeaf;
     childQuad.bottomLeft = copyInstance(bottomLeft);
     childQuad.bottomRight = copyInstance(bottomRight);
     childQuad.topLeft = copyInstance(topLeft);
     childQuad.topRight = copyInstance(topRight);
-    childQuad.nodes = structuredClone(nodes);
+    childQuad.nodes = [...nodes];
     
     const [direction, newRect] = QuadTreeMethods.expansionDirection(rect, towards);
 
     // update the current quad tree to be a parent of this new quad.
     this.rect = newRect;
-    this.capacity = structuredClone(capacity);
+    this.capacity = capacity;
     this.isRoot = true;
     this.isLeaf = false;
     this.nodes = [];
