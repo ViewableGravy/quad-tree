@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { Point } from "./point";
 import { QuadTree } from "./quad-tree";
 import { Rectangle } from "./rectangle";
@@ -403,6 +403,34 @@ describe("QuadTree", () => {
         test("TODO", () => {})
       })
     })
+  })
+
+  describe("subscribe()", () => {
+    describe("GIVEN an empty tree", () => {
+      describe('WHEN a single callback is added to the tree', () => {
+        describe('AND a rectangle is inserted into the tree', () => {
+          withQuadtree({ capacity: 2 }, (tree) => {
+            const callback = vi.fn();
+            const rectangle = new Rectangle(0, 0, 5, 5);
+
+            const unsubscribe = tree.subscribe(callback);
+            tree.insert(rectangle);
+            
+            test("THEN the callback should be called once", () => {
+              expect(callback).toHaveBeenCalledTimes(1);
+            })
+
+            test("AND the callback should be called with the correct arguments", () => {
+              expect(callback).toHaveBeenCalledWith({ type: "insert", node: rectangle });
+            })
+
+            test("AND the subscribe function should return an unsubscribe function", () => {
+              expect(unsubscribe).toBeTypeOf("function");
+            })
+          })
+        })
+      })
+    });
   })
 })
 

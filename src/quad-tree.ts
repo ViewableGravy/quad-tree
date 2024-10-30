@@ -1,7 +1,9 @@
 import { Point } from "./point";
 import { Rectangle } from "./rectangle";
+import type { Subscription } from "./types";
 import { copyInstance } from "./utils";
 
+/***** TYPE DEFINITIONS *****/
 type childQuadDirection = "topLeft" | "topRight" | "bottomLeft" | "bottomRight";
 
 const QUAD_CODES = {
@@ -13,6 +15,8 @@ const QUAD_CODES = {
 let treeID = 0
 
 export class QuadTree<T extends Rectangle> {
+  private subscriptions: Array<Subscription.Callback> = []
+
   public topRight: QuadTree<T> | null = null
   public topLeft: QuadTree<T> | null = null
   public bottomRight: QuadTree<T> | null = null
@@ -34,33 +38,19 @@ export class QuadTree<T extends Rectangle> {
     private isRoot: boolean = true
   ) {}
 
+  public subscribe(callback: Subscription.Callback) {
+    this.subscriptions.push(callback)
+
+    return () => {
+      this.subscriptions = this.subscriptions.filter((sub) => sub !== callback)
+    }
+  }
+
   public insert(node: T | Array<T>) {
-    if (Array.isArray(node)) {
-      for (const n of node) {
-        this.insert(n);
-      }
-      return;
+    this._insert(node);
+    for (const subscriber of this.subscriptions) {
+      subscriber({ type: "insert", node });
     }
-
-    if (!this.rect.intersects(node)) {
-      if (!this.isRoot)
-        return QUAD_CODES.NODE_NOT_WITHIN_BOUNDS;
-      
-      this.expand(node);
-      return void this.insert(node);
-    }
-
-    const hasFreeCapacity = this.nodes.length < this.capacity;
-    if (hasFreeCapacity && !this.hasSubdivided())
-      return void this.nodes.push(node);
-
-    this.subdivide();
-
-    // Push node to this tree if it intersects more than 1 child
-    if (this.childIntersections(node) > 1)
-      return void this.nodes.push(node);
-
-    this.insertChildren(node);
   }
 
   public retrieve(from: Rectangle | Point, logging: boolean = false): Array<T> {
@@ -114,7 +104,14 @@ export class QuadTree<T extends Rectangle> {
     ]
   }
 
-  public delete(at: Rectangle | Point): void {
+  public delete(at: Rectangle | Point) {
+    this._delete(at);
+    for (const subscriber of this.subscriptions) {
+      subscriber({ type: "delete", node: at });
+    }
+  }
+
+  private _delete(at: Rectangle | Point): void {
     if (at instanceof Point) {
       if (!this.rect.contains(at)) {
         return;
@@ -139,10 +136,42 @@ export class QuadTree<T extends Rectangle> {
       return true;
     });
 
-    this.topRight?.delete(at);
-    this.topLeft?.delete(at);
-    this.bottomRight?.delete(at);
-    this.bottomLeft?.delete(at);
+    this.topRight?._delete(at);
+    this.topLeft?._delete(at);
+    this.bottomRight?._delete(at);
+    this.bottomLeft?._delete(at);
+  }
+
+  /** 
+   * Internal insert function which performs the insert logic. The public function will call this function and notify subscribers.
+   */
+  private _insert(node: T | Array<T>) {
+    if (Array.isArray(node)) {
+      for (const n of node) {
+        this._insert(n);
+      }
+      return;
+    }
+    
+    if (!this.rect.intersects(node)) {
+      if (!this.isRoot)
+        return QUAD_CODES.NODE_NOT_WITHIN_BOUNDS;
+      
+      this.expand(node);
+      return void this._insert(node);
+    }
+    
+    const hasFreeCapacity = this.nodes.length < this.capacity;
+    if (hasFreeCapacity && !this.hasSubdivided())
+      return void this.nodes.push(node);
+    
+    this.subdivide();
+    
+    // Push node to this tree if it intersects more than 1 child
+    if (this.childIntersections(node) > 1)
+      return void this.nodes.push(node);
+    
+    this.insertChildren(node);
   }
 
   private subdivide(): void {
@@ -328,10 +357,10 @@ export class QuadTree<T extends Rectangle> {
    */
   private insertChildren(node: T) {
     const result = [
-      this.topRight!.insert(node),
-      this.topLeft!.insert(node),
-      this.bottomRight!.insert(node),
-      this.bottomLeft!.insert(node)
+      this.topRight!._insert(node),
+      this.topLeft!._insert(node),
+      this.bottomRight!._insert(node),
+      this.bottomLeft!._insert(node)
     ];
 
     if (result.filter((r) => r !== QUAD_CODES.NODE_NOT_WITHIN_BOUNDS).length > 1) {
