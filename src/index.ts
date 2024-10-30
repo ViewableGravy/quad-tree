@@ -1,17 +1,12 @@
-import { withQuadtree } from "./utils";
+import { QuadTree } from "./quad-tree";
+import { Rectangle } from "./rectangle";
 
-console.log("Hello via Bun!");
+export default QuadTree;
 
-
-withQuadtree({ capacity: 2 }, (tree) => {
-  
-
-  Bun.write(
-    Bun.file('./quad-tree.json'),
-    JSON.stringify(tree)
-  )
-});
-
+export {
+	QuadTree,
+	Rectangle
+};
 
 
 
