@@ -38,6 +38,11 @@ export class QuadTree<T extends Rectangle> {
     private isRoot: boolean = true
   ) {}
 
+  /**
+   * Subscribes to the quad tree. The provided callback will be called whenever an insert or delete operation occurs.
+   * The callback will be provided with an object that contains the type of operation and the value that was passed to the
+   * insert or delete function.
+   */
   public subscribe(callback: Subscription.Callback) {
     this.subscriptions.push(callback)
 
@@ -46,6 +51,14 @@ export class QuadTree<T extends Rectangle> {
     }
   }
 
+  /**
+   * Inserts a node or an array of nodes into the quad tree. If an array is provided, each node will be inserted
+   * into the quad tree. This function will notify all subscribers that an insert operation has occured and will provide
+   * the value passed to this function.
+   * 
+   * If the node that is being inserted is outside the bounds of the current quad tree, the quad tree will be expanded
+   * to accomodate the new node.
+   */
   public insert(node: T | Array<T>) {
     this._insert(node);
     for (const subscriber of this.subscriptions) {
@@ -53,6 +66,10 @@ export class QuadTree<T extends Rectangle> {
     }
   }
 
+  /**
+   * Retrieves all nodes that intersect with the provided rectangle or point. If a point is provided, then any node that contains the point
+   * will be returned, while if a rectangle is provided, any node that intersects the rectangle will be returned.
+   */
   public retrieve(from: Rectangle | Point, logging: boolean = false): Array<T> {
     if (from instanceof Point) {
       if (!this.rect.contains(from)) {
@@ -110,6 +127,10 @@ export class QuadTree<T extends Rectangle> {
     ];
   }
 
+  /**
+   * Retrieves all nodes in the quad tree. This will return all nodes in the current quad tree and all children quad
+   * trees.
+   */
   public retrieveAll(): Array<T> {
     return [
       ...this.nodes,
@@ -120,6 +141,13 @@ export class QuadTree<T extends Rectangle> {
     ]
   }
 
+  /**
+   * Deletes nodes that intersect the provided rectangle or point. If a point is provided, then any node that contains the point
+   * will be deleted, while if a rectangle is provided, any node that intersects the rectangle will be deleted.
+   * 
+   * Since this function performs an operation on the tree, it will also notify all subscribers that a delete operation has occured
+   * and will provide the value passed to this function.
+   */
   public delete(at: Rectangle | Point) {
     this._delete(at);
     for (const subscriber of this.subscriptions) {
@@ -226,30 +254,28 @@ export class QuadTree<T extends Rectangle> {
    * Note: only root quad trees can be expanded.
    */
   private expand(towards: Rectangle) {
-    const { bottomLeft, bottomRight, capacity, isLeaf, nodes, rect, topLeft, topRight } = this;
-
     if (!this.isRoot)
       return;
 
     // create new quad tree and set all fields to match this objects fields;
     const childQuad = new QuadTree<T>(
-      Rectangle.from(rect),
-      capacity,
+      Rectangle.from(this.rect),
+      this.capacity,
       false
     );
 
-    childQuad.isLeaf = isLeaf;
-    childQuad.bottomLeft = copyInstance(bottomLeft);
-    childQuad.bottomRight = copyInstance(bottomRight);
-    childQuad.topLeft = copyInstance(topLeft);
-    childQuad.topRight = copyInstance(topRight);
-    childQuad.nodes = [...nodes];
+    childQuad.isLeaf = this.isLeaf;
+    childQuad.nodes = [...this.nodes];
+    childQuad.bottomLeft = copyInstance(this.bottomLeft);
+    childQuad.bottomRight = copyInstance(this.bottomRight);
+    childQuad.topLeft = copyInstance(this.topLeft);
+    childQuad.topRight = copyInstance(this.topRight);
     
-    const [direction, newRect] = QuadTreeMethods.expansionDirection(rect, towards);
+    const [direction, newRect] = QuadTreeMethods.expansionDirection(this.rect, towards);
 
     // update the current quad tree to be a parent of this new quad.
     this.rect = newRect;
-    this.capacity = capacity;
+    this.capacity = this.capacity;
     this.isRoot = true;
     this.isLeaf = false;
     this.nodes = [];

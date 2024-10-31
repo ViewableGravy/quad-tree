@@ -526,18 +526,37 @@ describe("QuadTree", () => {
 describe("Putting a shit tonne of rectangles in the tree", () => {
   withQuadtree({ capacity: 4 }, (tree) => {
 
-    Array.from({ length: 10000 }).forEach(() => {
-      const x = Math.floor(Math.random() * 500 * (Math.random() > 0.5 ? -1 : 1));
-      const y = Math.floor(Math.random() * 500 * (Math.random() > 0.5 ? -1 : 1));
-      tree.insert(new Rectangle(x, y, 1, 1));
+    const rectangles = Array.from({ length: 10000 }).map(() => {
+      const x = Math.floor(Math.random() * 5000 * (Math.random() > 0.5 ? -1 : 1));
+      const y = Math.floor(Math.random() * 5000 * (Math.random() > 0.5 ? -1 : 1));
+
+      return new Rectangle(x, y, 1, 1)
     });
+
+    console.log(rectangles)
+
+    tree.insert(rectangles)
     
     test("retrieveAll(): all nodes are retrieved", () => {
       expect(tree.retrieveAll().length).toBe(10000)
     })
 
     test("retrieve(): all nodes are retrieved", () => {
-      expect(tree.retrieve(new Rectangle(0, 0, 1000, 1000)).length).toBe(10000)
+      expect(tree.retrieve(new Rectangle(0, 0, 10000, 10000)).length).toBe(10000)
+    })
+  })
+})
+
+
+describe("Expanding", () => {
+  withQuadtree({ capacity: 1 }, (tree) => {
+    tree.insert([
+      new Rectangle(5000, 5000, 1, 1),
+      new Rectangle(10, 10, 1, 1)
+    ]);
+
+    test("retrieveAll(): all nodes are retrieved", () => {
+      expect(tree.retrieveAll().length).toBe(2)
     })
   })
 })
