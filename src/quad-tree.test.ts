@@ -406,7 +406,7 @@ describe("QuadTree", () => {
   })
 
   describe("subscribe()", () => {
-    describe("GIVEN an empty tree", () => {
+    describe("GIVEN a tree", () => {
       describe('WHEN a single callback is added to the tree', () => {
         describe('AND a rectangle is inserted into the tree', () => {
           withQuadtree({ capacity: 2 }, (tree) => {
@@ -426,6 +426,93 @@ describe("QuadTree", () => {
 
             test("AND the subscribe function should return an unsubscribe function", () => {
               expect(unsubscribe).toBeTypeOf("function");
+            })
+          })
+        })
+
+        describe("And multiple rectangles are inserted into the tree", () => {
+          withQuadtree({ capacity: 2 }, (tree) => {
+            const callback = vi.fn();
+
+            const rectangle = new Rectangle(0, 0, 5, 5);
+            const rectangle2 = new Rectangle(10, 10, 5, 5);
+            const rectangles = [rectangle, rectangle2]
+
+            const unsubscribe = tree.subscribe(callback);
+
+            tree.insert(rectangles);
+
+            test("THEN the callback should be called once", () => {
+              expect(callback).toHaveBeenCalledTimes(1);
+            })
+
+            test("AND the callback should be called with the correct arguments", () => {
+              expect(callback).toHaveBeenCalledWith({ type: "insert", node: rectangles });
+            })
+
+            test("AND the subscribe function should return an unsubscribe function", () => {
+              expect(unsubscribe).toBeTypeOf("function");
+            })
+          })
+        })
+      })
+
+      describe('WHEN multiple callbacks are added to the tree', () => {
+        describe('AND a rectangle is inserted into the tree', () => {
+          withQuadtree({ capacity: 2 }, (tree) => {
+            const callback = vi.fn();
+            const callback2 = vi.fn();
+            const rectangle = new Rectangle(0, 0, 5, 5);
+
+            const unsubscribe = tree.subscribe(callback);
+            const unsubscribe2 = tree.subscribe(callback2);
+
+            tree.insert(rectangle);
+            
+            test("THEN both callbacks should be called once", () => {
+              expect(callback).toHaveBeenCalledTimes(1);
+              expect(callback2).toHaveBeenCalledTimes(1);
+            })
+
+            test("AND the callbacks should be called with the correct arguments", () => {
+              expect(callback).toHaveBeenCalledWith({ type: "insert", node: rectangle });
+              expect(callback2).toHaveBeenCalledWith({ type: "insert", node: rectangle });
+            })
+
+            test("AND the subscribe function should return an unsubscribe function", () => {
+              expect(unsubscribe).toBeTypeOf("function");
+              expect(unsubscribe2).toBeTypeOf("function");
+            })
+          })
+        })
+
+        describe('AND multiple rectangles are inserted into the tree', () => {
+          withQuadtree({ capacity: 2 }, (tree) => {
+            const callback = vi.fn();
+            const callback2 = vi.fn();
+
+            const rectangle = new Rectangle(0, 0, 5, 5);
+            const rectangle2 = new Rectangle(10, 10, 5, 5);
+            const rectangles = [rectangle, rectangle2]
+
+            const unsubscribe = tree.subscribe(callback);
+            const unsubscribe2 = tree.subscribe(callback2);
+
+            tree.insert(rectangles);
+
+            test("THEN both callbacks should be called once", () => {
+              expect(callback).toHaveBeenCalledTimes(1);
+              expect(callback2).toHaveBeenCalledTimes(1);
+            })
+
+            test("AND the callbacks should be called with the correct arguments", () => {
+              expect(callback).toHaveBeenCalledWith({ type: "insert", node: rectangles });
+              expect(callback2).toHaveBeenCalledWith({ type: "insert", node: rectangles });
+            })
+
+            test("AND the subscribe function should return an unsubscribe function", () => {
+              expect(unsubscribe).toBeTypeOf("function");
+              expect(unsubscribe2).toBeTypeOf("function");
             })
           })
         })
