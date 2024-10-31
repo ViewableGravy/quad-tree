@@ -85,13 +85,29 @@ export class QuadTree<T extends Rectangle> {
       }
     }
 
+    if (this.isLeaf) {
+      return this.nodes;
+    }
+
+    const intersectingNodes = this.nodes.filter((node) => {
+      if (from instanceof Point) {
+        return node.contains(from);
+      }
+
+      if (from instanceof Rectangle) {
+        return node.intersects(from);
+      }
+
+      return false;
+    });
+
     return [
-      ...this.nodes,
+      ...intersectingNodes,
       ...this.topRight?.retrieve(from, logging) || [],
       ...this.topLeft?.retrieve(from, logging) || [],
       ...this.bottomRight?.retrieve(from, logging) || [],
       ...this.bottomLeft?.retrieve(from, logging) || []
-    ]
+    ];
   }
 
   public retrieveAll(): Array<T> {
