@@ -72,13 +72,13 @@ export class QuadTree<T extends Rectangle> {
    */
   public retrieve(from: Rectangle | Point, logging: boolean = false): Array<T> {
     if (from instanceof Point) {
-      if (!this.rect.contains(from)) {
+      if (!Rectangle.contains(this.rect, from)) {
         return [];
       }
     }
 
     if (from instanceof Rectangle) {
-      if (!this.rect.intersects(from)) {
+      if (!Rectangle.intersects(this.rect, from)) {
         return [];
       }
     }
@@ -108,11 +108,11 @@ export class QuadTree<T extends Rectangle> {
 
     const intersectingNodes = this.nodes.filter((node) => {
       if (from instanceof Point) {
-        return node.contains(from);
+        return Rectangle.contains(node, from);
       }
 
       if (from instanceof Rectangle) {
-        return node.intersects(from);
+        return Rectangle.intersects(node, from);
       }
 
       return false;
@@ -157,24 +157,24 @@ export class QuadTree<T extends Rectangle> {
 
   private _delete(at: Rectangle | Point): void {
     if (at instanceof Point) {
-      if (!this.rect.contains(at)) {
+      if (!Rectangle.contains(this.rect, at)) {
         return;
       }
     }
 
     if (at instanceof Rectangle) {
-      if (!this.rect.intersects(at)) {
+      if (!Rectangle.intersects(this.rect, at)) {
         return;
       }
     }
 
     this.nodes = this.nodes.filter((node) => {
       if (at instanceof Point) {
-        return !node.contains(at);
+        return !Rectangle.contains(node, at);
       }
 
       if (at instanceof Rectangle) {
-        return !node.intersects(at);
+        return !Rectangle.intersects(node, at);
       }
 
       return true;
@@ -197,7 +197,7 @@ export class QuadTree<T extends Rectangle> {
       return;
     }
     
-    if (!this.rect.intersects(node)) {
+    if (!Rectangle.intersects(this.rect,node)) {
       if (!this.isRoot)
         return QUAD_CODES.NODE_NOT_WITHIN_BOUNDS;
       
@@ -292,12 +292,11 @@ export class QuadTree<T extends Rectangle> {
    * Returns the number of children that the current node intersects with. 
    */
   private childIntersections(node: T) {
-    const intersections = [
-      this.topLeft!.rect.intersects(node),
-      this.topRight!.rect.intersects(node),
-      this.bottomLeft!.rect.intersects(node),
-      this.bottomRight!.rect.intersects(node)
-    ]
+    const intersections: boolean[] = []
+	if (this.topLeft) intersections.push(Rectangle.intersects(this.topLeft.rect, node))
+	if (this.topRight) intersections.push(Rectangle.intersects(this.topRight.rect, node))
+	if (this.bottomLeft) intersections.push(Rectangle.intersects(this.bottomLeft.rect, node))
+	if (this.bottomRight) intersections.push(Rectangle.intersects(this.bottomRight.rect, node))
     
     return intersections.filter(Boolean).length;
   }
