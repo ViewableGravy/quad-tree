@@ -148,8 +148,9 @@ export class QuadTree<T extends Rectangle> {
    * Since this function performs an operation on the tree, it will also notify all subscribers that a delete operation has occured
    * and will provide the value passed to this function.
    */
-  public delete(at: Rectangle | Point) {
+  public delete(at: Rectangle | Point, shouldEmitEvent: boolean = true) {
     this._delete(at);
+	if (!shouldEmitEvent) return;
     for (const subscriber of this.subscriptions) {
       subscriber({ type: "delete", node: at });
     }
